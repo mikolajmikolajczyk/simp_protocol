@@ -1,5 +1,3 @@
-> THIS IS STILL WORK IN PROGRESS. NOT READY TO USE!
-
 # Simp UART Protocol Library
 
 A simple and reliable UART communication protocol implemented in Rust. This library provides functionality to send and receive data packets over UART, with optional acknowledgment (ACK) handling, making it suitable for embedded systems like the ESP32 and standard PC applications.
@@ -25,5 +23,13 @@ Add this library to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-my_protocol_lib = { path = "../path_to_your_library" }  # Adjust the path as necessary
+simp_protocol = { git = "https://github.com/mikolajmikolajczyk/simp_protocol.git" }  # Adjust the path as necessary
 ```
+
+### How to use?
+
+Please check out `examples` directory as it contains all you need to start using this library.
+
+### License
+
+This library is published with MIT license.
