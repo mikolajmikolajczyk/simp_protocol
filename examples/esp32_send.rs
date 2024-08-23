@@ -3,6 +3,8 @@ This code needs to be compiled using esp32 target!!!
 This won't compile on regular PCs!!!
 Please read [this](https://docs.esp-rs.org/book/) book for more information.
 */
+
+/*
 use esp_idf_svc::hal::delay;
 use esp_idf_svc::hal::gpio;
 use esp_idf_svc::hal::peripherals::Peripherals;
@@ -64,3 +66,5 @@ fn main() {
         delay::Ets::delay_ms(1000_u32);
     }
 }
+ */
+fn main() {}
