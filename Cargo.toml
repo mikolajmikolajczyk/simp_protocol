@@ -1,7 +1,12 @@
 [package]
 name = "simp_protocol"
+description = "simp_protocol is a simplistic protocol to communicate over serial ports. It supports ack, automated escaping and unescaping of special bytes and checksum error detection."
+keywords = ["messaging", "uart", "serial"]
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+license-file = "LICENSE"
+
 
 [dependencies]
 
