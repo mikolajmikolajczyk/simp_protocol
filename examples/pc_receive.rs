@@ -59,7 +59,7 @@ fn main() {
                 break; // Exit the loop upon successful reception and conversion
             }
             Err(e) => {
-                //eprintln!("Failed to receive packet, retrying... Error: {}", e);
+                eprintln!("Failed to receive packet, retrying... Error: {}", e);
                 sleep(Duration::from_millis(100)); // Wait briefly before retrying
             }
         }
