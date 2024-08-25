@@ -23,7 +23,7 @@ Add this library to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-simp_protocol = { git = "https://github.com/mikolajmikolajczyk/simp_protocol.git" }  # Adjust the path as necessary
+simp_protocol = { version = "0.1.1" }  # Adjust the path as necessary
 ```
 
 ### How to use?

@@ -3,15 +3,24 @@ pub const END_BYTE: u8 = 0x7F;
 pub const ESCAPE_BYTE: u8 = 0x7D;
 pub const ESCAPE_XOR: u8 = 0x20;
 
+/// Represents a packet with start, length, payload, checksum, and end bytes
 pub struct Packet {
+    /// Start byte (START_BYTE)
     pub start_byte: u8,
+    /// Length of payload
     pub length: u8,
+    /// Payload
     pub payload: Vec<u8>,
+    /// Checksum
     pub checksum: u8,
+    /// End byte (END_BYTE)
     pub end_byte: u8,
 }
 
 impl Packet {
+    /// Creates a new packet with the given payload.
+    /// 
+    /// The payload will be escaped and the checksum will be calculated.
     pub fn new(payload: Vec<u8>) -> Self {
         let escaped_payload = Self::escape_payload(&payload);
         let length = escaped_payload.len() as u8;
@@ -25,10 +34,12 @@ impl Packet {
         }
     }
 
+    /// Calculates the checksum of the given payload.
     pub fn calculate_checksum(payload: &[u8]) -> u8 {
         payload.iter().fold(0u8, |acc, &x| acc.wrapping_add(x))
     }
 
+    /// Escapes the given payload by replacing START_BYTE, END_BYTE, and ESCAPE_BYTE with their escaped versions.
     pub fn escape_payload(payload: &[u8]) -> Vec<u8> {
         let mut escaped_payload = Vec::new();
         for &byte in payload {
@@ -43,6 +54,7 @@ impl Packet {
         escaped_payload
     }
 
+    /// Unescapes the given payload by replacing ESCAPE_BYTE with its unescaped version.
     pub fn unescape_payload(payload: &[u8]) -> Vec<u8> {
         let mut unescaped_payload = Vec::new();
         let mut escape_next = false;
@@ -60,6 +72,7 @@ impl Packet {
         unescaped_payload
     }
 
+    /// Converts the packet to its byte representation.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![self.start_byte, self.length];
         bytes.extend(&self.payload);
@@ -68,6 +81,7 @@ impl Packet {
         bytes
     }
 
+    /// Creates a packet from its byte representation.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, &'static str> {
         if bytes.len() < 4 || bytes[0] != START_BYTE || bytes[bytes.len() - 1] != END_BYTE {
             return Err("Invalid packet structure");

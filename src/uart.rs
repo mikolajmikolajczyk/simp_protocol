@@ -4,18 +4,22 @@ use std::time::{Duration, Instant};
 const ACK_BYTE: u8 = 0x06;
 const NACK_BYTE: u8 = 0x15;
 
+/// Trait for UART communication
+/// 
+/// This trait needs to be implemented in order for the library to work.
+/// All functions depend on the implementation of this trait.
 pub trait Uart {
     fn write(&mut self, data: &[u8]) -> Result<usize, &'static str>;
     fn read(&mut self) -> Option<u8>;
 }
 
-// Function to send a packet without waiting for an ACK
+/// Function to send a packet without waiting for an ACK
 pub fn send_packet(uart: &mut impl Uart, packet: &Packet) -> Result<usize, &'static str> {
     uart.write(&packet.to_bytes())
         .map_err(|_| "Failed to send packet")
 }
 
-// Function to send a packet and wait for an ACK
+/// Function to send a packet and wait for an ACK
 pub fn send_packet_with_ack(
     uart: &mut impl Uart,
     packet: &Packet,
@@ -43,6 +47,8 @@ pub fn send_packet_with_ack(
     }
     Err("Failed to send packet after retries")
 }
+
+/// Function to receive a packet
 pub fn receive_packet(uart: &mut impl Uart) -> Result<super::packet::Packet, &'static str> {
     let mut buffer = Vec::new();
     while let Some(byte) = uart.read() {
@@ -54,7 +60,7 @@ pub fn receive_packet(uart: &mut impl Uart) -> Result<super::packet::Packet, &'s
     Err("Failed to receive packet")
 }
 
-// Function to send multiple packets
+/// Function to send multiple packets
 pub fn send_multiple_packets_with_ack(
     uart: &mut impl Uart,
     data: &[u8],
@@ -80,7 +86,7 @@ pub fn send_multiple_packets_with_ack(
     Ok(())
 }
 
-// Function to receive multiple packets
+/// Function to receive multiple packets
 pub fn receive_multiple_packets(uart: &mut impl Uart) -> Result<Vec<u8>, &'static str> {
     let mut data = Vec::new();
     let mut expected_sequence = 0u8;
