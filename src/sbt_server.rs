@@ -2,7 +2,7 @@
 
 use std::{collections::HashMap, thread::sleep, time::Duration, vec};
 
-use crate::uart::{receive_multiple_packets, send_multiple_packets_with_ack, Uart};
+use crate::uart::{receive_data_in_sequence, send_data_in_sequence, Uart};
 
 #[repr(u8)]
 pub enum SbtResponseType {
@@ -32,20 +32,22 @@ type HandlerFn = Box<dyn Fn(Vec<u8>) -> Vec<u8> + Send + Sync>;
 pub struct SbtServer {
     uart: Box<dyn Uart>,
     handlers: HashMap<u8, HandlerFn>,
+    timeout: Duration,
 }
 
 impl SbtServer {
-    pub fn new(uart: Box<dyn Uart>) -> Self {
+    pub fn new(uart: Box<dyn Uart>, timeout: Duration) -> Self {
         SbtServer {
             uart,
             handlers: HashMap::new(),
+            timeout,
         }
     }
 
     pub fn run(&mut self, sleep_time: u64) -> Result<(), &'static str> {
         loop {
             match self.run_non_blocking() {
-                Ok(()) => {
+                Ok(_) => {
                     if sleep_time > 0 {
                         sleep(std::time::Duration::from_millis(sleep_time));
                     }
@@ -61,23 +63,21 @@ impl SbtServer {
         self.handlers.insert(command, handler);
     }
 
-    pub fn run_non_blocking(&mut self) -> Result<(), &'static str> {
+    pub fn run_non_blocking(&mut self) -> Result<usize, &'static str> {
         match self.receive_request() {
             Ok(request) => {
                 let response = self.process_request(request);
-                self.send_response(response, 100)
+                self.send_response(response, self.timeout)
             }
             Err(_) => {
-                self.uart
-                    .write(&[SbtResponseType::InvalidRequest as u8])
-                    .unwrap();
-                Ok(())
+                self.uart.write(&[SbtResponseType::InvalidRequest as u8])?;
+                Ok(0)
             }
         }
     }
 
     fn receive_request(&mut self) -> Result<Vec<u8>, &'static str> {
-        receive_multiple_packets(&mut *self.uart)
+        receive_data_in_sequence(&mut *self.uart, self.timeout, true)
     }
 
     fn process_request(&mut self, request: Vec<u8>) -> Vec<u8> {
@@ -85,27 +85,17 @@ impl SbtServer {
             return create_response(SbtResponseType::InvalidRequest, vec![]);
         }
         match self.handlers.get(&request[0]) {
-            Some(handler) => {
-                handler(request[0..].to_vec());
-            }
-            None => {
-                return create_response(SbtResponseType::HandlerNotFound, vec![]);
-            }
+            Some(handler) => handler(request[0..].to_vec()),
+            None => create_response(SbtResponseType::HandlerNotFound, vec![]),
         }
-
-        let mut response = vec![SbtResponseType::InvalidRequest as u8];
-        if let Some(handler) = self.handlers.get(&request[0]) {
-            response = handler(request[1..].to_vec());
-        }
-        response
     }
-    fn send_response(&mut self, response: Vec<u8>, timeout: u64) -> Result<(), &'static str> {
-        send_multiple_packets_with_ack(
-            &mut *self.uart,
-            &response,
-            3,
-            Duration::from_millis(timeout),
-        )
+
+    fn send_response(
+        &mut self,
+        response: Vec<u8>,
+        timeout: Duration,
+    ) -> Result<usize, &'static str> {
+        send_data_in_sequence(&mut *self.uart, &response, timeout, true)
     }
 }
 
@@ -136,33 +126,33 @@ mod tests {
     fn test_receive_request_success() {
         let uart = MockUart::new();
         // Set the read data to a valid packet
-        // 0x00 is the sequence number. UartServer uses receive_multiple_packets
+        // 0x00 is the sequence number. UartServer uses receive_data_in_sequence
         // and this function keeps sequence numbers
         let packet = Packet::new(vec![0x00, 0x01, 0x03]);
         uart.set_read_data(packet.to_bytes());
-        let mut server = SbtServer::new(Box::new(uart));
+        let mut server = SbtServer::new(Box::new(uart), Duration::from_millis(100));
 
         let request = server.receive_request().unwrap();
-        assert_eq!(request, vec![0x01, 0x03]);
+        assert_eq!(request, vec![0x03]);
     }
 
     #[test]
     fn test_receive_request_failure() {
         let uart = MockUart::new();
         // Set the read data to a valid packet
-        // 0x00 is the sequence number. UartServer uses receive_multiple_packets
+        // 0x00 is the sequence number. UartServer uses receive_data_in_sequence
         // and this function keeps sequence numbers
         let packet = Packet::new(vec![0x01, 0x01, 0x03]);
         uart.set_read_data(packet.to_bytes());
-        let mut server = SbtServer::new(Box::new(uart));
+        let mut server = SbtServer::new(Box::new(uart), Duration::from_millis(100));
 
         let request = server.receive_request().unwrap_err();
-        assert_eq!(request, "Packet sequence out of order");
+        assert_eq!(request, "Packet out of sequence");
     }
 
     #[test]
     fn test_process_request_handler_not_found() {
-        let mut server = SbtServer::new(Box::new(MockUart::new()));
+        let mut server = SbtServer::new(Box::new(MockUart::new()), Duration::from_millis(100));
         let request = vec![0x00, 0x01, 0x03];
         let response = server.process_request(request);
         assert_eq!(response, vec![SbtResponseType::HandlerNotFound as u8, 0]);
@@ -170,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_process_request_invalid_request() {
-        let mut server = SbtServer::new(Box::new(MockUart::new()));
+        let mut server = SbtServer::new(Box::new(MockUart::new()), Duration::from_millis(100));
         let request = vec![];
         let response = server.process_request(request);
         assert_eq!(response, vec![SbtResponseType::InvalidRequest as u8, 0]);
@@ -186,7 +176,7 @@ mod tests {
     }
     #[test]
     fn test_process_request() {
-        let mut server = SbtServer::new(Box::new(MockUart::new()));
+        let mut server = SbtServer::new(Box::new(MockUart::new()), Duration::from_millis(100));
         server.add_handler(0x00, Box::new(test_handler_success));
         server.add_handler(0x01, Box::new(test_handler_internal_error));
         let request = vec![0x00, 0x03];

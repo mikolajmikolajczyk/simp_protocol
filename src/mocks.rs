@@ -8,6 +8,7 @@ pub struct MockUart {
     // This will hold the data that the mock UART "sends" or "receives"
     write_data: RefCell<Vec<u8>>,
     read_data: RefCell<Vec<u8>>,
+    write_count: usize,
 }
 
 impl MockUart {
@@ -15,6 +16,7 @@ impl MockUart {
         MockUart {
             write_data: RefCell::new(Vec::new()),
             read_data: RefCell::new(Vec::new()),
+            write_count: 0,
         }
     }
 
@@ -22,13 +24,22 @@ impl MockUart {
         *self.read_data.borrow_mut() = data;
     }
 
+    pub fn get_read_data(&self) -> Vec<u8> {
+        self.read_data.borrow().clone()
+    }
+
     pub fn get_written_data(&self) -> Vec<u8> {
         self.write_data.borrow().clone()
+    }
+
+    pub fn get_write_count(&self) -> usize {
+        self.write_count
     }
 }
 
 impl Uart for MockUart {
     fn write(&mut self, data: &[u8]) -> Result<usize, &'static str> {
+        self.write_count += 1;
         self.write_data.borrow_mut().extend_from_slice(data);
         Ok(data.len())
     }

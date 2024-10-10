@@ -49,7 +49,7 @@ fn main() {
     println!("Waiting for chip info...");
 
     loop {
-        match receive_packet(&mut pc_uart) {
+        match receive_packet(&mut pc_uart, Duration::from_millis(100), false) {
             Ok(packet) => {
                 // Convert the packet payload (Vec<u8>) to a String
                 match String::from_utf8(packet.payload.to_vec()) {

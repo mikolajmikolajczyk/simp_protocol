@@ -5,11 +5,10 @@ keywords = ["messaging", "uart", "serial"]
 version = "0.1.1"
 edition = "2021"
 license = "MIT"
-license-file = "LICENSE"
-
 
 [dependencies]
 
 [dev-dependencies]
 clap = { version = "4.5.16", features = ["derive"] }
 serialport = "4.5.0"
+virtual-serialport = "=0.1.1"
