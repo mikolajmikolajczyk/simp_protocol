@@ -4,6 +4,7 @@ pub const ESCAPE_BYTE: u8 = 0x7D;
 pub const ESCAPE_XOR: u8 = 0x20;
 
 /// Represents a packet with start, length, payload, checksum, and end bytes
+#[derive(Debug, PartialEq)]
 pub struct Packet {
     /// Start byte (START_BYTE)
     pub start_byte: u8,
@@ -19,7 +20,7 @@ pub struct Packet {
 
 impl Packet {
     /// Creates a new packet with the given payload.
-    /// 
+    ///
     /// The payload will be escaped and the checksum will be calculated.
     pub fn new(payload: Vec<u8>) -> Self {
         let escaped_payload = Self::escape_payload(&payload);
@@ -133,11 +134,14 @@ mod tests {
         let payload = vec![START_BYTE, 0x01, END_BYTE, ESCAPE_BYTE, 0x02];
         let escaped_payload = Packet::escape_payload(&payload);
         let expected = vec![
-            ESCAPE_BYTE, START_BYTE ^ ESCAPE_XOR, 
-            0x01, 
-            ESCAPE_BYTE, END_BYTE ^ ESCAPE_XOR, 
-            ESCAPE_BYTE, ESCAPE_BYTE ^ ESCAPE_XOR, 
-            0x02
+            ESCAPE_BYTE,
+            START_BYTE ^ ESCAPE_XOR,
+            0x01,
+            ESCAPE_BYTE,
+            END_BYTE ^ ESCAPE_XOR,
+            ESCAPE_BYTE,
+            ESCAPE_BYTE ^ ESCAPE_XOR,
+            0x02,
         ];
         assert_eq!(escaped_payload, expected);
     }
@@ -145,11 +149,14 @@ mod tests {
     #[test]
     fn test_unescaping_payload() {
         let escaped_payload = vec![
-            ESCAPE_BYTE, START_BYTE ^ ESCAPE_XOR, 
-            0x01, 
-            ESCAPE_BYTE, END_BYTE ^ ESCAPE_XOR, 
-            ESCAPE_BYTE, ESCAPE_BYTE ^ ESCAPE_XOR, 
-            0x02
+            ESCAPE_BYTE,
+            START_BYTE ^ ESCAPE_XOR,
+            0x01,
+            ESCAPE_BYTE,
+            END_BYTE ^ ESCAPE_XOR,
+            ESCAPE_BYTE,
+            ESCAPE_BYTE ^ ESCAPE_XOR,
+            0x02,
         ];
         let unescaped_payload = Packet::unescape_payload(&escaped_payload);
         let expected = vec![START_BYTE, 0x01, END_BYTE, ESCAPE_BYTE, 0x02];
@@ -189,13 +196,13 @@ mod tests {
         let payload = vec![0x01, 0x02, 0x03];
         let packet = Packet::new(payload.clone());
         let mut bytes = packet.to_bytes();
-    
+
         // Store the index of the checksum to avoid borrowing issues
         let checksum_index = bytes.len() - 2;
-    
+
         // Corrupt the checksum
         bytes[checksum_index] = packet.checksum.wrapping_add(1);
-    
+
         let result = Packet::from_bytes(&bytes);
         assert!(result.is_err());
         assert_eq!(result.err().unwrap(), "Checksum mismatch");
